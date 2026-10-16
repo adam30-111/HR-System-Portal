@@ -84,16 +84,8 @@
 </div>
 
 <script>
-  /* ------------------------------------------------------------------
-     TO ADD A NEW LINK: copy one line below, change the values, done.
-     The page design does not need any change.
-       icon  = any emoji
-       title = card title
-       desc  = short description
-       href  = page URL
-     ------------------------------------------------------------------ */
   const LINKS = [
-    { icon: "📝", title: "Leave Request", desc: "Submit a new leave request",        href: "https://forms.gle/XWbm37iFgAuvgseV8" },
+    { icon: "📝", title: "Leave Request", desc: "Submit a new leave request",        href: "https://forms.gle/XWbm37iFgAuvgseV8", newTab: true },
     { icon: "💬", title: "HR Chatbot",    desc: "Ask about the employee handbook",   href: "HR_Chatbot.html" },
   ];
 
@@ -102,6 +94,10 @@
     const a = document.createElement("a");
     a.className = "link-card";
     a.href = l.href;
+    if (l.newTab) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
 
     const icon = document.createElement("div");
     icon.className = "link-icon";
