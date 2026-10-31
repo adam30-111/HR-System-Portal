@@ -65,6 +65,7 @@
   .bubble.user { background: var(--accent); color: #fff; border-bottom-right-radius: 5px; }
   .bubble.bot { background: var(--card); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
   .bubble.error { background: var(--error-soft); border-color: #e3b8b0; color: var(--error); }
+  .bubble a { color: var(--accent); font-weight: 600; word-break: break-all; }
 
   .dots { display: flex; gap: 5px; padding: 6px 2px; }
   .dots span {
@@ -114,6 +115,12 @@
   const WEBHOOK_URL = "https://adam16777.app.n8n.cloud/webhook/BrightPath Solutions Chat";
   const TIMEOUT_MS = 90000;
 
+  // One id per conversation. It stays the same until the page is reloaded,
+  // so n8n's Simple Memory can tell conversations apart.
+  const sessionId = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : String(Date.now()) + Math.random().toString(36).slice(2);
+
   const chat = document.getElementById("chat");
   const form = document.getElementById("form");
   const input = document.getElementById("q");
@@ -126,12 +133,33 @@
     return node;
   }
 
+  // Turns plain-text URLs into clickable links (document links from the bot).
+  function renderText(bubble, text) {
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlPattern);
+    parts.forEach((part) => {
+      if (/^https?:\/\//.test(part)) {
+        const a = el("a", "", part);
+        a.href = part;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        bubble.append(a);
+      } else if (part) {
+        bubble.append(document.createTextNode(part));
+      }
+    });
+  }
+
   function addMessage(who, content, extraClass) {
     const row = el("div", "row " + who);
     if (who === "bot") row.append(el("div", "avatar", "BP"));
     const bubble = el("div", "bubble " + who + (extraClass ? " " + extraClass : ""));
-    if (typeof content === "string") bubble.textContent = content;
-    else bubble.append(content);
+    if (typeof content === "string") {
+      if (who === "bot" && !extraClass) renderText(bubble, content);
+      else bubble.textContent = content;
+    } else {
+      bubble.append(content);
+    }
     row.append(bubble);
     chat.append(row);
     chat.scrollTop = chat.scrollHeight;
@@ -155,7 +183,7 @@
     return first ? first.trim() : "";
   }
 
-  addMessage("bot", "Hi! Ask me anything about the BrightPath employee handbook.");
+  addMessage("bot", "Hi! Ask me anything about the BrightPath employee handbook, or request an HR document.");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -173,7 +201,7 @@
       const res = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, sessionId }),
         signal: ctrl.signal
       });
       if (!res.ok) throw new Error("The server answered with status " + res.status + ". Check that it is active.");
